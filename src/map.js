@@ -116,7 +116,9 @@ export default class Map {
                 mergeMap(marker => fromEvent(marker, "click")),//이후는 클릭 이후 임
                 map(({ overlay }) => ({
                     marker: overlay,
-                    position: overlay.getPosition()
+                    position: overlay.getPosition(),
+                    id:overlay.getOptions('id'),
+                    name:overlay.getOptions('name')
                 }))
             )
     }
@@ -124,7 +126,12 @@ export default class Map {
     manageMarker(station$) {
         return station$
             .pipe(
-                map(stations => stations.map(station => this.createMarker(station.stationName, station.x, station.y))),
+                map(stations => stations.map(station => {
+                const marker = this.createMarker(station.stationName, station.x, station.y);
+                marker.setOptions('id',station.stationId);
+                marker.setOptions('name',station.stationName);
+                return marker
+                })),
                 //tap(a => console.log('스캔전',a)),
                 scan((prev, markers) => {
                     prev.forEach(this.deleteMarker);
@@ -135,10 +142,20 @@ export default class Map {
                 mergeMap(markers => from(markers)),
             )
     }
+
+    mapBus(stationId$){
+        return stationId$
+        .pipe(
+            switchMap(id => ajax.getJSON(`/bus/pass/station/${id}`)),
+            pluck('busRouteList')
+        )
+    }
+
+
+
     constructor($map) {
         this.naverMap = createNaverMap($map);
         this.infowindow = createNaverInfoWindow();
-
         const station$ = this.createDragend$()
             .pipe(
                 this.mapStation,
