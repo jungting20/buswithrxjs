@@ -1,6 +1,6 @@
 
-const {  of, fromEvent, from } = rxjs;
-const { map, switchMap, pluck, scan, mergeMap,tap } = rxjs.operators;
+const { of, fromEvent, from, combineLatest } = rxjs;
+const { map, switchMap, pluck, scan, mergeMap, tap } = rxjs.operators;
 const { ajax } = rxjs.ajax;
 
 
@@ -117,8 +117,8 @@ export default class Map {
                 map(({ overlay }) => ({
                     marker: overlay,
                     position: overlay.getPosition(),
-                    id:overlay.getOptions('id'),
-                    name:overlay.getOptions('name')
+                    id: overlay.getOptions('id'),
+                    name: overlay.getOptions('name')
                 }))
             )
     }
@@ -127,10 +127,10 @@ export default class Map {
         return station$
             .pipe(
                 map(stations => stations.map(station => {
-                const marker = this.createMarker(station.stationName, station.x, station.y);
-                marker.setOptions('id',station.stationId);
-                marker.setOptions('name',station.stationName);
-                return marker
+                    const marker = this.createMarker(station.stationName, station.x, station.y);
+                    marker.setOptions('id', station.stationId);
+                    marker.setOptions('name', station.stationName);
+                    return marker;
                 })),
                 //tap(a => console.log('스캔전',a)),
                 scan((prev, markers) => {
@@ -143,14 +143,36 @@ export default class Map {
             )
     }
 
-    mapBus(stationId$){
-        return stationId$
-        .pipe(
-            switchMap(id => ajax.getJSON(`/bus/pass/station/${id}`)),
-            pluck('busRouteList')
-        )
+    mapBus(markerInfo$) {
+        return markerInfo$
+            .pipe(
+                switchMap(markerInfo => {
+                    const marker$ = of(markerInfo);
+                    const bus$ = ajax.getJSON(`/bus/pass/station/${markerInfo.id}`)
+                        .pipe(pluck('busRouteList'))
+
+                    return combineLatest(marker$, bus$, (marker, buses) =>({
+                        markerInfo,
+                        buses
+                    }) 
+                    )
+                }
+                ),
+            )
     }
 
+    render(buses, { name }) {
+        const list = buses.map(bus => (`<dd>
+    <a href="#">
+        <strong>${bus.routeName}</strong><span>${bus.regionName}</span>
+     <span class="type ${getBuesType(bus.routeTypeName)}">${bus.routeTypeName}</span>   
+    </a>
+</dd>`)).join("");
+
+        return `<dl class="bus-routes">
+    <dt><strong>${name}</strong></dt>${list}
+</dl>`
+    }
 
 
     constructor($map) {
@@ -160,12 +182,20 @@ export default class Map {
             .pipe(
                 this.mapStation,
                 this.manageMarker.bind(this),
-                this.mapMarkerClick
+                this.mapMarkerClick,
+                this.mapBus
             )
-        
-            station$.subscribe(markInfo =>{
-                console.log('클릭한 마커의 정보',markInfo)
-            })
+
+        station$.subscribe(({ markerInfo, buses }) => {
+            if (this.isOpenInfoWindow(markerInfo.position)) {
+                this.openInfoWindow(
+                    markerInfo.marker,
+                    markerInfo.position,
+                    this.render(buses, markerInfo))
+            } else {
+                this.closeInfoWindow();
+            }
+        })
     }
 }
 
