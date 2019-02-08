@@ -1,6 +1,6 @@
 
 const { of, fromEvent, from, combineLatest } = rxjs;
-const { map, switchMap, pluck, scan, mergeMap, tap } = rxjs.operators;
+const { map, switchMap, pluck, scan, mergeMap, tap, catchError } = rxjs.operators;
 const { ajax } = rxjs.ajax;
 
 
@@ -143,6 +143,7 @@ export default class Map {
             )
     }
 
+
     mapBus(markerInfo$) {
         return markerInfo$
             .pipe(
@@ -150,11 +151,10 @@ export default class Map {
                     const marker$ = of(markerInfo);
                     const bus$ = ajax.getJSON(`/bus/pass/station/${markerInfo.id}`)
                         .pipe(pluck('busRouteList'))
-
-                    return combineLatest(marker$, bus$, (marker, buses) =>({
+                    return combineLatest(marker$, bus$, (marker, buses) => ({
                         markerInfo,
-                        buses
-                    }) 
+                        buses:buses || []
+                    })
                     )
                 }
                 ),
@@ -163,11 +163,12 @@ export default class Map {
 
     render(buses, { name }) {
         const list = buses.map(bus => (`<dd>
-    <a href="#">
-        <strong>${bus.routeName}</strong><span>${bus.regionName}</span>
-     <span class="type ${getBuesType(bus.routeTypeName)}">${bus.routeTypeName}</span>   
-    </a>
-</dd>`)).join("");
+        <a href="#">
+            <strong>${bus.routeName}</strong><span>${bus.regionName}</span>
+         <span class="type ${getBuesType(bus.routeTypeName)}">${bus.routeTypeName}</span>   
+        </a>
+    </dd>`)).join("");
+
 
         return `<dl class="bus-routes">
     <dt><strong>${name}</strong></dt>${list}
@@ -183,7 +184,8 @@ export default class Map {
                 this.mapStation,
                 this.manageMarker.bind(this),
                 this.mapMarkerClick,
-                this.mapBus
+                this.mapBus //여기서 에러가 아니고 언디파인드...,
+
             )
 
         station$.subscribe(({ markerInfo, buses }) => {
@@ -197,6 +199,14 @@ export default class Map {
             }
         })
     }
+
 }
 
 
+function catchundefined(returnvalue) {
+    return function ($obj) {
+        return $obj.pipe(
+            map(a => a || returnvalue)
+        )
+    }
+}
