@@ -1,8 +1,9 @@
-const { fromEvent } = rxjs;
-const { debounceTime, map, distinctUntilChanged, share,partition,switchMap,retry,tap,finalize,merge,pluck } = rxjs.operators;
+const { fromEvent,merge } = rxjs;
+const { debounceTime, map, distinctUntilChanged, share,partition,switchMap,retry,tap,finalize,pluck } = rxjs.operators;
 const { ajax } = rxjs.ajax;
 
 export default class AutoComplete {
+
   constructor($autocomplete) {
     this.$input = $autocomplete.querySelector('input');
     this.$layer = $autocomplete.querySelector('.layer');
@@ -25,10 +26,7 @@ export default class AutoComplete {
         this.reset();
       })
     )
-    reset$ = reset$
-    .pipe(
-      merge(fromEvent(this.$layer,"click",(evt) => evt.target.closest("li")))
-    )
+    reset$ = merge(reset$,fromEvent(this.$layer,"click",(evt) => evt.target.closest("li")));
     search$.subscribe(items => this.render((items ? Array.isArray(items) ? items : [items] : [])));
     reset$.subscribe(() => this.reset());
   }//end construcror
@@ -60,7 +58,7 @@ export default class AutoComplete {
   render(buses){
     this.$layer.innerHTML = buses.map(bus => {
       return `<li>
-    <a href="#">
+    <a href="#${bus.routeId}_${bus.routeName}">
         <strong>${bus.routeName}</strong>
         <span>${bus.regionName}</span>
         <div>${bus.routeTypeName}</div>
