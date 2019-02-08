@@ -29,7 +29,7 @@ export default class AutoComplete {
     .pipe(
       merge(fromEvent(this.$layer,"click",(evt) => evt.target.closest("li")))
     )
-    search$.subscribe(items => this.render(Array.isArray(items) ? items : [items]));
+    search$.subscribe(items => this.render((items ? Array.isArray(items) ? items : [items] : [])));
     reset$.subscribe(() => this.reset());
   }//end construcror
 
