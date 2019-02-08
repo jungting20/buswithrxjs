@@ -67,7 +67,6 @@ export function parseHash(){
 
 
 export function geolocation(){
-
     const defalutPosition = {
         coords : {
             longitude : 126.9783882,
@@ -76,7 +75,6 @@ export function geolocation(){
     }
 
     return new Observable(observer => {
-
         if(navigator.geolocation){
             window.navigator.geolocation.getCurrentPosition(
                 position => observer.next(position),

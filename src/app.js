@@ -9,7 +9,13 @@ const search = new AutoComplete(document.querySelector(".autocomplete"));
 const sidebar = new Sidebar(document.querySelector(".stations"));
 const map = new Map(document.querySelector(".map"), search$);
 
-
-
+console.log(render$)
+render$.subscribe(stations => {
+    if(stations.length){
+        map.drawPath(stations);
+    }else{
+        map.deletePath();
+    }
+});
 
 
